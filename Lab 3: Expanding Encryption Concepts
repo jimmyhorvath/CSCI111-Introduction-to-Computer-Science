@@ -1,0 +1,88 @@
+def repeat_keyword(keyword, message_length):
+    """Repeat the keyword to match the length of the message."""
+    repeated = ""
+    for i in range(message_length):
+        repeated += keyword[i % len(keyword)]
+    return repeated [:message_length]
+
+def vigenere_encrypt(message, keyword):
+    """Encrypt the message using the Vigenère cipher."""
+    encrypted_message = ""
+    keyword_repeated = repeat_keyword(keyword, len(message))
+    
+    for i in range(len(message)):
+        # Check if the character is a letter
+        if message[i].isalpha():
+            shift = ord(keyword_repeated[i].lower()) - ord('a')
+            # Your code here to encrypt the character
+            if message[i].islower():
+                encrypted_char = chr (( ord ( message[i] ) - 97 + shift ) % 26 + 97)
+            elif message[i].isupper():
+                encrypted_char = chr (( ord ( message[i] ) - 65 + shift ) % 26 + 65)
+            encrypted_message += encrypted_char  # Add the encrypted character
+        else:
+            encrypted_message += message[i]  # Keep non-alphabetical characters unchanged
+
+    return encrypted_message
+
+
+def vigenere_decrypt(ciphertext, keyword):
+    """Decrypt the message using the Vigenère cipher."""
+    decrypted_message = ""
+    keyword_repeated = repeat_keyword(keyword, len(ciphertext))
+    
+    for i in range(len(ciphertext)):
+        # Check if the character is a letter
+        if ciphertext[i].isalpha():
+            shift = ord(keyword_repeated[i].lower()) - ord('a')
+            # Your code here to decrypt the character
+            if ciphertext[i].islower():
+                decrypted_char = chr (( ord ( ciphertext[i] ) - 97 - shift ) % 26 + 97)
+            elif ciphertext[i].isupper():
+                decrypted_char = chr (( ord ( ciphertext[i] ) - 65 - shift ) % 26 + 65)
+            decrypted_message += decrypted_char  # Add the decrypted character
+        else:
+            decrypted_message += ciphertext[i]  # Keep non-alphabetical characters unchanged
+
+    return decrypted_message
+
+# Starter Code: Main Function
+if __name__ == "__main__":
+    # Get user input for the message and keyword
+    message = input("Enter your message: ")
+    keyword = input("Enter your keyword: ")
+    
+    # Encrypt the message
+    encrypted = vigenere_encrypt(message, keyword)
+    print(f"Encrypted Message: {encrypted}")
+    
+    # Decrypt the message
+    decrypted = vigenere_decrypt(encrypted, keyword)
+    print(f"Decrypted Message: {decrypted}")
+
+ 
+
+ 
+
+ 
+
+TEST CASES: 
+
+Enter your message: Hello, how are you?
+Enter your keyword: Wonderful
+Encrypted Message: Dsyos, bzs nui dif?
+Decrypted Message: Hello, how are you?
+
+ 
+
+Enter your message: Lebron James 
+Enter your keyword: King
+Encrypted Message: Vmoxyv Pkury 
+Decrypted Message: Lebron James 
+
+ 
+
+Enter your message: Chess
+Enter your keyword: Checkers
+Encrypted Message: Eoiuc
+Decrypted Message: Chess
