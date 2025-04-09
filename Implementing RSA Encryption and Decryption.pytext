@@ -1,0 +1,170 @@
+import random
+import json
+import requests
+import sympy
+
+def generate_10bit_prime():
+    """Generates a random 10-bit prime number."""
+    return sympy.randprime(0, 1024) 
+   
+
+def generate_rsa_keys():
+    """Generates RSA public and private keys using 10-bit primes."""
+    p = generate_10bit_prime()
+    q = generate_10bit_prime()
+    
+    while p == q:
+        q = generate_10bit_prime()
+    
+    n = p * q
+
+
+    totient = (p-1)*(q-1)
+
+   
+    e = 65537
+  
+    while sympy.gcd(e,totient) != 1:
+        e += 2 
+
+   
+
+    d = pow(e, -1, totient)
+
+    public_key = (e,n)
+    private_key = (d,n)
+    return public_key, private_key
+
+def save_keys(name, public_key, private_key):
+    """Saves the public and private keys to a JSON file."""
+    keys = {
+        "name": name,
+        "public_key": list(public_key),
+        "private_key": list(private_key)
+    }
+    with open(f"{name}_keys.json", "w") as f:
+        json.dump(keys, f, indent=4)
+
+def submit_key(name, public_key, server_url="http://137.113.118.25:5000"):
+    """Submits the public key to the keyserver."""
+    data = {
+        "name": name,
+        "public_key": list(public_key)
+    }
+
+    try:
+        response = requests.post(f"{server_url}/submit_key", json=data)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        print(f"Public key for {name} submitted successfully.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error submitting key: {e}")
+
+if __name__ == "__main__":
+    # Generate keys
+    public_key, private_key = generate_rsa_keys()
+    name = input("Enter your name: ")
+
+    # Save the keys locally
+    save_keys(name, public_key, private_key)
+
+    # Submit the public key to the keyserver
+    submit_key(name, public_key)
+
+#########Encrypter
+
+
+import json
+import requests
+
+def load_public_keyring():
+    """Loads the public keyring from public.json."""
+    try:
+        with open("public.json", "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def save_public_keyring(keyring):
+    """Saves the public keyring to public.json."""
+    with open("public.json", "w") as f:
+        json.dump(keyring, f, indent=4)
+
+def fetch_keys_from_server(server_url="http://137.113.118.25:5000"):
+    """Fetches all public keys from the server."""
+    try:
+        response = requests.get(f"{server_url}/list_keys")
+        response.raise_for_status()
+        keyring = response.json()
+        save_public_keyring(keyring)
+        print("Fetched keys from server and saved to public.json.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching keys from server: {e}")
+
+def encrypt_message(message, public_key):
+    """Encrypts a message using the recipient's public key."""
+    #retrieves e and n from public_key
+    e , n = public_key
+    #converts message to an integer
+    encrypted = [pow (ord (char), e, n) for char in message]
+    print (f"Encrypted message: {encrypted} ")
+    return encrypted
+
+def send_message(sender, recipient, encrypted_message, server_url="http://137.113.118.25:5000"):
+    """Sends the encrypted message to the keyserver."""
+    data = {
+        "sender": sender,
+        "recipient": recipient,
+        "message": encrypted_message
+    }
+
+    try:
+        response = requests.post(f"{server_url}/send_message", json=data)
+        response.raise_for_status()
+        print(f"Message from {sender} to {recipient} sent successfully.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending message: {e}")
+
+if __name__ == "__main__":
+    fetch_keys_from_server()  # Fetch the latest keys
+
+    keyring = load_public_keyring()
+
+    sender = input("Enter your name: ")
+    recipient = input("Enter the recipient's name: ")
+    message = input("Enter your message: ")
+
+    if recipient not in keyring:
+        print(f"No public key found for {recipient}.")
+    else:
+        public_key = keyring[recipient]
+        encrypted_message = encrypt_message(message, public_key)
+        send_message(sender, recipient, encrypted_message)
+
+#########Decrypter
+
+import json
+
+def load_private_key(filename):
+    """Loads the private key from a JSON file."""
+    with open(filename, "r") as f:
+        data = json.load(f)
+        return tuple(data["private_key"])
+
+def decrypt_message(encrypted_message, private_key):
+    """Decrypts an RSA-encrypted message using the private key."""
+    #take variables from private key
+    d,n = private_key
+    #takes each character in the list encrypted message and raises it to the power of d, then takes the result modulo. This result then gets converted into a character
+    decrypted_chars= [chr(pow(char, d, n)) for char in encrypted_message]
+    #joins all the characters from decrypted_chars
+    return ''.join(decrypted_chars)
+
+if __name__ == "__main__":
+    recipient = input("Enter the recipient's name: ")
+    private_key = load_private_key(f"{recipient}_keys.json")
+
+    encrypted_message = input("Enter the encrypted message (comma-separated): ")
+    encrypted_message = [int(x) for x in encrypted_message.split(",")]
+
+    decrypted_message = decrypt_message(encrypted_message, private_key)
+    print(f"Decrypted message: {decrypted_message}")
